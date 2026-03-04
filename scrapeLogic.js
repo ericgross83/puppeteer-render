@@ -12,8 +12,6 @@ const scrapeLogic = async (res) => {
                 "--single-process",
                 "--no-zygote"
             ],
-            // Wenn der Pfad von Docker gesetzt wurde, nutze ihn. Sonst den lokalen.
-            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
         });
         
         const page = await browser.newPage();
