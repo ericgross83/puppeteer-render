@@ -3,7 +3,7 @@ FROM ghcr.io/puppeteer/puppeteer:latest
 
 # Wir überspringen den Download, da das Image schon Chrome enthält
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome
 
 # Arbeitsverzeichnis im Container festlegen
 WORKDIR /usr/src/app
