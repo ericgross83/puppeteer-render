@@ -1,20 +1,21 @@
-const puppeteer = require("puppeteer")
+const puppeteer = require("puppeteer");
 
 const scrapeLogic = async (res) => {
-    let browser;
+    let browser; // Die Variable muss nach ganz oben, damit 'finally' sie kennt
+    
     try {
-        // Launch the browser and open a new blank page.
-        const browser = await puppeteer.launch({
+        // Wir übergeben die Argumente für den Linux-Server
+        browser = await puppeteer.launch({
             args: [
                 "--disable-setuid-sandbox",
                 "--no-sandbox",
                 "--single-process",
                 "--no-zygote"
             ],
-            executablePath: process.env.NODE_ENV === "production"
-                ? process.env.PUPPETEER_EXECUTABLE_PATH
-                : puppeteer.executablePath(),
+            // Wenn der Pfad von Docker gesetzt wurde, nutze ihn. Sonst den lokalen.
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
         });
+        
         const page = await browser.newPage();
 
         // Navigate the page to a URL.
@@ -39,18 +40,18 @@ const scrapeLogic = async (res) => {
         const fullTitle = await textSelector?.evaluate(el => el.textContent);
 
         // Print the full title.
-        const logStatement = `The title of this blog post is ${fullTitle}`
+        const logStatement = `The title of this blog post is ${fullTitle}`;
         console.log(logStatement);
 
-        res.send(fullTitle)
+        res.send(fullTitle);
     } catch (error) {
-        res.send(`Something went wrong while running Puppeteer: ${error}`)
+        console.error(error);
+        res.send(`Something went wrong while running Puppeteer: ${error}`);
     } finally {
-        await browser.close();
+        if (browser) {
+            await browser.close();
+        }
     }
-
-
-
 };
 
 module.exports = { scrapeLogic };
