@@ -1,5 +1,5 @@
 # Wir nutzen das offizielle Puppeteer-Image als Basis
-FROM ghcr.io/puppeteer/puppeteer:latest
+FROM ghcr.io/puppeteer/puppeteer:24.38.0
 
 # Arbeitsverzeichnis im Container festlegen
 WORKDIR /usr/src/app
