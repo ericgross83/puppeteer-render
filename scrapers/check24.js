@@ -19,7 +19,7 @@ const scrapeCheck24 = async (data) => {
 
         // 1. Nur kurz die Seite laden für frische Cookies/Session
         console.log(`[Check24] Initialisiere Session...`);
-        await page.goto('https://www.check24.de/baufinanzierung/immobilienbewertung/', { waitUntil: 'domcontentloaded' });
+        await page.goto('https://baufinanzierung.check24.de/baufinanzierung/immobilienbewertung/', { waitUntil: 'domcontentloaded' });
 
         // 2. DEN API-CALL VIA NODE-CONTEXT ABFEUERN (Master-Plan B)
         console.log(`[Check24] Extrahiere Session-Cookies...`);
