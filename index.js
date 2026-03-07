@@ -26,7 +26,7 @@ const authenticate = (req, res, next) => {
     }
 };
 
-// Unser Endpunkt
+// Homeday Endpunkt
 app.post('/api/v1/estimations/homeday', authenticate, async (req, res) => {
     const { street, zip, city } = req.body;
 
