@@ -3,9 +3,9 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 puppeteer.use(StealthPlugin());
 
 const scrapeCheck24 = async (data) => {
-    const { 
+    const {
         street, houseNumber, zip, city = "Berlin",
-        livingSpace = '60', yearOfConstruction = 1990, rooms = '2' 
+        livingSpace = '60', yearOfConstruction = 1990, rooms = '2'
     } = data;
 
     let browser;
@@ -16,22 +16,30 @@ const scrapeCheck24 = async (data) => {
         });
 
         const page = await browser.newPage();
-        
+
         // 1. Nur kurz die Seite laden für frische Cookies/Session
         console.log(`[Check24] Initialisiere Session...`);
         await page.goto('https://www.check24.de/baufinanzierung/immobilienbewertung/', { waitUntil: 'domcontentloaded' });
 
-        // 2. DEN API-CALL DIREKT ABFEUERN (Kein Tippen mehr!)
-        console.log(`[Check24] Sende Direkt-Anfrage für ${street}...`);
-        
+        // 2. DEN API-CALL ÜBER PUPPETEER DIREKT ABFEUERN
+        console.log(`[Check24] Sende Direkt-Anfrage via Page-Context...`);
+
+        // Wir nutzen page.evaluate, bauen aber den Request robuster auf
         const iframeUrl = await page.evaluate(async (payload) => {
-            const response = await fetch('https://baufinanzierung.check24.de/baufinanzierung/immobilienbewertung/session', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'accept': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const result = await response.json();
-            return result.priceHubbleIframeUrl;
+            try {
+                const resp = await fetch('https://baufinanzierung.check24.de/baufinanzierung/immobilienbewertung/session', {
+                    method: 'POST',
+                    headers: {
+                        'accept': 'application/json, text/plain, */*',
+                        'content-type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await resp.json();
+                return data.priceHubbleIframeUrl;
+            } catch (e) {
+                return "ERROR: " + e.message;
+            }
         }, {
             propertyType: 1,
             address: { street, houseNumber, postalCode: zip, location: city },
@@ -44,10 +52,13 @@ const scrapeCheck24 = async (data) => {
             garagesCount: 0,
             parkingSpacesCount: 0,
             purpose: 1,
-            purposePeriod: 0
+            purposePeriod: 0,
+            urlAppform: "/baufinanzierung/immobilienbewertung/create-appform-init-url"
         });
 
-        if (!iframeUrl) throw new Error("Keine Iframe-URL erhalten");
+        if (!iframeUrl || iframeUrl.startsWith("ERROR")) {
+            throw new Error(iframeUrl || "Keine Iframe-URL erhalten");
+        }
 
         // 3. Direkt zum Preis-Dossier springen
         console.log(`[Check24] Dossier erhalten, extrahiere Endpreis...`);
@@ -61,7 +72,7 @@ const scrapeCheck24 = async (data) => {
             const clean = (s) => parseInt(s?.replace(/[^0-9]/g, '') || '0', 10);
             const main = document.querySelector('.valuation__section_main');
             const spanne = Array.from(document.querySelectorAll('.valuation__section_main')).find(s => s.textContent.includes('-'));
-            
+
             return {
                 total: clean(main?.querySelector('.valuation__section__value')?.textContent),
                 sqm: clean(main?.querySelector('.valuation__section__value_sqm')?.textContent),
