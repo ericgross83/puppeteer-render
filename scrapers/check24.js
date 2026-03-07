@@ -5,13 +5,13 @@ puppeteer.use(StealthPlugin());
 
 const scrapeCheck24 = async (data) => {
     // Variablen aus dem API-Call entpacken (mit Standardwerten als Fallback)
-    const { 
-        street, 
-        houseNumber, 
-        zip, 
-        livingSpace = '40', 
-        yearOfConstruction = '1990', 
-        rooms = '3' 
+    const {
+        street,
+        houseNumber,
+        zip,
+        livingSpace = '40',
+        yearOfConstruction = '1990',
+        rooms = '3'
     } = data;
 
     let browser;
@@ -34,7 +34,7 @@ const scrapeCheck24 = async (data) => {
 
         // 1. Navigation
         await page.goto('https://www.check24.de/baufinanzierung/immobilienbewertung/', { waitUntil: 'domcontentloaded' });
-        
+
         // 2. Cookie Banner
         try {
             await new Promise(r => setTimeout(r, 2000));
@@ -50,7 +50,7 @@ const scrapeCheck24 = async (data) => {
                 return false;
             });
             if (cookieClicked) await new Promise(r => setTimeout(r, 1500));
-        } catch (err) {}
+        } catch (err) { }
 
         // 3. Typ: Eigentumswohnung
         const typSelector = 'input[name="propertyType"][value="1"]';
@@ -73,7 +73,7 @@ const scrapeCheck24 = async (data) => {
         await page.waitForSelector('form[qa-ref="property-evaluation-form"]', { visible: true });
 
         await page.type('[qa-ref="property-evaluation-location"] input', zip, { delay: 100 });
-        await new Promise(r => setTimeout(r, 1000)); 
+        await new Promise(r => setTimeout(r, 1000));
 
         const streetInput = '[qa-ref="property-evaluation-street"] input';
         await page.waitForSelector(streetInput, { visible: true });
@@ -81,19 +81,19 @@ const scrapeCheck24 = async (data) => {
         await page.keyboard.press('Backspace');
         await new Promise(r => setTimeout(r, 500));
         await page.type(streetInput, street, { delay: 150 });
-        await new Promise(r => setTimeout(r, 1000)); 
+        await new Promise(r => setTimeout(r, 1000));
         await page.keyboard.press('Enter');
         await new Promise(r => setTimeout(r, 500));
 
         await page.type('[qa-ref="property-evaluation-house-number"] input', houseNumber, { delay: 100 });
         await page.type('[qa-ref="property-evaluation-total-living-space"] input', livingSpace, { delay: 50 });
         await page.type('[qa-ref="property-evaluation-year-of-construction"] input', yearOfConstruction, { delay: 50 });
-        
+
         await page.select('[qa-ref="property-evaluation-condition"] select', '2');
         await page.select('[qa-ref="property-evaluation-furnishing"] select', '2');
         await page.select('[qa-ref="property-evaluation-garages-count"] select', '1');
         await page.select('[qa-ref="property-evaluation-parking-space-count"] select', '1');
-        
+
         await page.type('[qa-ref="property-evaluation-rooms-count"] input', rooms, { delay: 50 });
         await page.select('[qa-ref="property-evaluation-bathrooms-count"] select', '1');
 
@@ -114,34 +114,39 @@ const scrapeCheck24 = async (data) => {
         console.log('[Check24] Warte auf PriceHubble-Dossier (Berechnung läuft)...');
         const iframeSelector = 'iframe[qa-ref="property-evaluation-iframe"]';
         await page.waitForSelector(iframeSelector, { timeout: 25000 });
-        
+
         const iframeUrl = await page.$eval(iframeSelector, el => el.src);
         await page.goto(iframeUrl, { waitUntil: 'networkidle2' });
 
-        // 8. WERTE AUSLESEN
-        await page.waitForSelector('.valuation__section_main', { timeout: 15000 });
+        // 8. WERTE AUSLESEN (Verbesserte Version)
+        console.log('[Check24] Extrahiere Daten aus PriceHubble...');
+
+        // Wir warten, bis das Element da ist
+        await page.waitForSelector('.valuation__section__value', { timeout: 15000 });
+
+        // Kleiner Trick: Wir warten kurz, bis die Zahlen-Animation von PriceHubble fertig ist
+        await new Promise(r => setTimeout(r, 2000));
 
         const valuation = await page.evaluate(() => {
-            const sections = document.querySelectorAll('.valuation__section_main');
-            if (sections.length === 0) return null;
-
-            // Hilfsfunktion: Macht aus "225.100 €" -> 225100 (als Zahl)
             const cleanNum = (str) => {
                 if (!str) return null;
-                return parseInt(str.replace(/[^0-9]/g, ''), 10);
+                const match = str.replace(/\./g, '').match(/\d+/);
+                return match ? parseInt(match[0], 10) : null;
             };
 
-            // Hauptwerte
-            const marktwertSection = sections[0];
-            const totalText = marktwertSection.querySelector('.valuation__section__value')?.textContent || '';
-            const sqmText = marktwertSection.querySelector('.valuation__section__value_sqm')?.textContent || '';
+            const sections = Array.from(document.querySelectorAll('.valuation__section_main'));
 
-            // Spanne
+            // Wir suchen gezielt nach den Texten, um sicherzugehen
+            const marktwertSection = sections.find(s => s.textContent.includes('Marktwert'));
+            const spanneSection = sections.find(s => s.textContent.includes('Marktwertspanne'));
+
+            const totalText = marktwertSection?.querySelector('.valuation__section__value')?.textContent || '';
+            const sqmText = marktwertSection?.querySelector('.valuation__section__value_sqm')?.textContent || '';
+
             let minPrice = null;
             let maxPrice = null;
-            if (sections.length > 1) {
-                const spanneText = sections[1].querySelector('.valuation__section__value')?.textContent || '';
-                // Teilt "198.100 - 249.400 €" am Bindestrich auf
+            if (spanneSection) {
+                const spanneText = spanneSection.querySelector('.valuation__section__value')?.textContent || '';
                 const parts = spanneText.split('-');
                 if (parts.length === 2) {
                     minPrice = cleanNum(parts[0]);
