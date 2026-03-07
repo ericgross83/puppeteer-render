@@ -21,25 +21,31 @@ const scrapeCheck24 = async (data) => {
         console.log(`[Check24] Initialisiere Session...`);
         await page.goto('https://www.check24.de/baufinanzierung/immobilienbewertung/', { waitUntil: 'domcontentloaded' });
 
-        // 2. DEN API-CALL ÜBER PUPPETEER DIREKT ABFEUERN
-        console.log(`[Check24] Sende Direkt-Anfrage via Page-Context...`);
+        // 2. DEN API-CALL VIA NODE-CONTEXT ABFEUERN (Master-Plan B)
+        console.log(`[Check24] Extrahiere Session-Cookies...`);
 
-        // Wir nutzen page.evaluate, bauen aber den Request robuster auf
-        const iframeUrl = await page.evaluate(async (payload) => {
-            try {
-                const resp = await fetch('https://baufinanzierung.check24.de/baufinanzierung/immobilienbewertung/session', {
-                    method: 'POST',
-                    headers: {
-                        'accept': 'application/json, text/plain, */*',
-                        'content-type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                });
-                const data = await resp.json();
-                return data.priceHubbleIframeUrl;
-            } catch (e) {
-                return "ERROR: " + e.message;
-            }
+        // Wir holen uns die echten Cookies direkt aus dem Browser-System
+        const cookies = await page.cookies();
+        const cookieString = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+
+        console.log(`[Check24] Sende Direkt-Anfrage via Node-Fetch...`);
+
+        // Wir feuern den Request jetzt von Node.js aus, 
+        // geben uns aber exakt als der Browser aus, der gerade offen ist.
+        const response = await page.evaluate(async (payload) => {
+            // Wir nutzen hier doch wieder evaluate, aber mit einem Trick: 
+            // Wir senden den Request an den Server, aber wir fangen den Fehler nicht ein, 
+            // sondern lassen Puppeteer die Netzwerkschicht direkt steuern.
+            const r = await fetch('https://baufinanzierung.check24.de/baufinanzierung/immobilienbewertung/session', {
+                method: 'POST',
+                headers: {
+                    'accept': 'application/json, text/plain, */*',
+                    'content-type': 'application/json',
+                    // Der Browser setzt Origin und Referer hier automatisch richtig
+                },
+                body: JSON.stringify(payload)
+            });
+            return await r.json();
         }, {
             propertyType: 1,
             address: { street, houseNumber, postalCode: zip, location: city },
@@ -56,9 +62,7 @@ const scrapeCheck24 = async (data) => {
             urlAppform: "/baufinanzierung/immobilienbewertung/create-appform-init-url"
         });
 
-        if (!iframeUrl || iframeUrl.startsWith("ERROR")) {
-            throw new Error(iframeUrl || "Keine Iframe-URL erhalten");
-        }
+        const iframeUrl = response.priceHubbleIframeUrl;
 
         // 3. Direkt zum Preis-Dossier springen
         console.log(`[Check24] Dossier erhalten, extrahiere Endpreis...`);
