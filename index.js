@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 
 app.get('/valuation', async (req, res) => {
-    // API-Key Check
+    // 1. API-Key Check (Nutzt deine Railway-Variable MY_API_KEY)
     if (req.headers['x-api-key'] !== process.env.MY_API_KEY) {
         return res.status(401).json({ error: 'Nicht autorisiert' });
     }
@@ -26,7 +26,7 @@ app.get('/valuation', async (req, res) => {
 
     console.log(`🔎 Starte kombinierte Abfrage für: ${input.street} ${input.houseNumber}`);
 
-    // Alle Scraper gleichzeitig starten
+    // 2. Alle Scraper gleichzeitig starten
     const results = await Promise.allSettled([
         scrapeHomeday(input),
         scrapeCheck24(input),
@@ -34,25 +34,28 @@ app.get('/valuation', async (req, res) => {
     ]);
 
     const data = {
-        homeday: results[0].status === 'fulfilled' ? results[0].value : { success: false },
-        check24: results[1].status === 'fulfilled' ? results[1].value : { success: false },
-        immoscout: results[2].status === 'fulfilled' ? results[2].value : { success: false }
+        homeday: results[0].status === 'fulfilled' ? results[0].value : { success: false, error: results[0].reason },
+        check24: results[1].status === 'fulfilled' ? results[1].value : { success: false, error: results[1].reason },
+        immoscout: results[2].status === 'fulfilled' ? results[2].value : { success: false, error: results[2].reason }
     };
 
-    // Durchschnittsberechnung (nur erfolgreiche Werte)
-    const validPrices = [
-        data.homeday.price,
-        data.check24.price,
-        data.immoscout.totalValue
-    ].filter(p => p > 0);
+    // 3. Wir sammeln alle GESAMT-Preise (Wichtig: Keys müssen exakt stimmen!)
+    const totalPrices = [
+        data.homeday.totalPrice,    // Erwartet 'totalPrice' von Homeday
+        data.check24.priceTotal,    // Kommt so von Check24
+        data.immoscout.totalValue   // Kommt so von ImmoScout
+    ].filter(p => p && p > 0);
 
-    const avgPrice = validPrices.length > 0 
-        ? Math.round(validPrices.reduce((a, b) => a + b, 0) / validPrices.length) 
+    // 4. Durchschnittsberechnung
+    const finalAverage = totalPrices.length > 0
+        ? Math.round(totalPrices.reduce((a, b) => a + b, 0) / totalPrices.length)
         : 0;
 
+    // 5. Antwort senden
     res.json({
         metadata: input,
-        averagePrice: avgPrice,
+        averagePrice: finalAverage, // Hier stand vorher avgPrice (Fehler!)
+        totalSourcesFound: totalPrices.length,
         details: data,
         timestamp: new Date().toISOString()
     });

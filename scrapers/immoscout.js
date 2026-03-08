@@ -1,4 +1,12 @@
+const path = require('path');
 const fs = require('fs');
+
+// In der Funktion:
+const cookiePath = path.resolve(__dirname, '../is24_cookies.json');
+if (!fs.existsSync(cookiePath)) {
+    throw new Error(`Cookies nicht gefunden unter: ${cookiePath}`);
+}
+
 
 /**
  * ImmoScout24 API-Scraper (Direct Fetch Modus)
@@ -7,11 +15,11 @@ const fs = require('fs');
 const scrapeImmoScout = async (input) => {
     try {
         // 1. Cookies und Sicherheits-Token laden
-        if (!fs.existsSync('./is24_cookies.json')) {
+        if (!fs.existsSync(cookiePath)) {
             throw new Error("is24_cookies.json fehlt! Bitte einmalig manuell erstellen.");
         }
-        
-        const rawCookies = JSON.parse(fs.readFileSync('./is24_cookies.json', 'utf8'));
+
+        const rawCookies = JSON.parse(fs.readFileSync(cookiePath, 'utf8'));
         const cookieHeader = rawCookies.map(c => `${c.name}=${c.value}`).join('; ');
         const xsrfToken = rawCookies.find(c => c.name === 'XSRF-TOKEN')?.value;
 
@@ -41,9 +49,9 @@ const scrapeImmoScout = async (input) => {
 
         // 3. Fehlerbehandlung (z.B. Cookies abgelaufen)
         if (!response.ok) {
-            return { 
-                success: false, 
-                platform: 'ImmoScout24', 
+            return {
+                success: false,
+                platform: 'ImmoScout24',
                 status: response.status,
                 error: response.status === 401 ? "Cookies abgelaufen" : "API Fehler"
             };

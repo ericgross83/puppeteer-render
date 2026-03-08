@@ -1,0 +1,35 @@
+{
+    "metadata": {
+        "street": "Petersburger Strasse",
+        "houseNumber": "39",
+        "zip": "10249",
+        "city": "Berlin",
+        "livingSpace": 60,
+        "rooms": 2
+    },
+    "averagePrice": 0,
+    "details": {
+        "homeday": {
+            "success": false,
+            "platform": "homeday",
+            "errorType": "SCRAPE_FAILED",
+            "message": "Cannot read properties of undefined (reading 'toLowerCase')"
+        },
+        "check24": {
+            "success": true,
+            "platform": "check24",
+            "pricePerSqm": 5937,
+            "priceTotal": 356200,
+            "priceRange": {
+                "min": 311300,
+                "max": 381900
+            }
+        },
+        "immoscout": {
+            "success": false,
+            "platform": "ImmoScout24",
+            "error": "is24_cookies.json fehlt! Bitte einmalig manuell erstellen."
+        }
+    },
+    "timestamp": "2026-03-08T02:07:39.753Z"
+}

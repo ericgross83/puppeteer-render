@@ -4,11 +4,12 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 
 puppeteer.use(StealthPlugin());
 
-const scrapeHomeday = async (street, zip, city) => {
+const scrapeHomeday = async (data) => {
+    const { street, zip, city, livingSpace } = data;
     let browser;
     try {
         browser = await puppeteer.launch({
-            headless: true, 
+            headless: true,
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
@@ -35,15 +36,19 @@ const scrapeHomeday = async (street, zip, city) => {
         const priceSelector = '.price-block__price__average';
         await page.waitForSelector(priceSelector, { timeout: 10000 });
         const rawPrice = await page.$eval(priceSelector, el => el.textContent);
-        
-        const cleanPrice = rawPrice.replace(/[^0-9]/g, ''); 
+
+        const cleanPrice = rawPrice.replace(/[^0-9]/g, '');
 
         console.log(`[Homeday] Erfolgreich: ${cleanPrice} €/m²`);
+
+        const pricePerSqm = parseInt(cleanPrice, 10);
 
         return {
             success: true,
             platform: "homeday",
-            pricePerSqm: parseInt(cleanPrice, 10),
+            pricePerSqm: pricePerSqm,
+            // WICHTIG: Das hier braucht die index.js für die Berechnung!
+            totalPrice: pricePerSqm * livingSpace,
             verifiedAddress: scrapedAddress
         };
 
