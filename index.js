@@ -1,75 +1,61 @@
-// index.js
+require('dotenv').config();
 const express = require('express');
-
-// HIER importieren wir unsere ausgelagerte Logik!
 const { scrapeHomeday } = require('./scrapers/homeday');
 const { scrapeCheck24 } = require('./scrapers/check24');
+const { scrapeImmoScout } = require('./scrapers/immoscout');
 
 const app = express();
-const PORT = process.env.PORT || 8080;
-const API_KEY = process.env.MY_API_KEY;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Der Türsteher
-const authenticate = (req, res, next) => {
-    if (!API_KEY) {
-        console.warn("⚠️ Kein MY_API_KEY definiert. Endpunkt ist ungeschützt!");
-        return next();
+app.get('/valuation', async (req, res) => {
+    // API-Key Check
+    if (req.headers['x-api-key'] !== process.env.API_KEY) {
+        return res.status(401).json({ error: 'Nicht autorisiert' });
     }
 
-    const userKey = req.headers['x-api-key'];
-    if (userKey && userKey === API_KEY) {
-        next();
-    } else {
-        res.status(401).json({ success: false, message: "Zugriff verweigert: Ungültiger API-Key." });
-    }
-};
+    const input = {
+        street: req.query.street || "Petersburger Straße",
+        houseNumber: req.query.houseNumber || "39",
+        zip: req.query.zip || "10249",
+        city: req.query.city || "Berlin",
+        livingSpace: parseInt(req.query.livingSpace) || 60,
+        rooms: parseInt(req.query.rooms) || 2
+    };
 
-// Homeday Endpunkt
-app.post('/api/v1/estimations/homeday', authenticate, async (req, res) => {
-    const { street, zip, city } = req.body;
+    console.log(`🔎 Starte kombinierte Abfrage für: ${input.street} ${input.houseNumber}`);
 
-    if (!street || !zip || !city) {
-        return res.status(400).json({
-            success: false,
-            message: "Bitte 'street', 'zip' und 'city' im JSON-Body mitsenden."
-        });
-    }
+    // Alle Scraper gleichzeitig starten
+    const results = await Promise.allSettled([
+        scrapeHomeday(input),
+        scrapeCheck24(input),
+        scrapeImmoScout(input)
+    ]);
 
-    // Hier rufen wir das externe Skript auf
-    const result = await scrapeHomeday(street, zip, city);
+    const data = {
+        homeday: results[0].status === 'fulfilled' ? results[0].value : { success: false },
+        check24: results[1].status === 'fulfilled' ? results[1].value : { success: false },
+        immoscout: results[2].status === 'fulfilled' ? results[2].value : { success: false }
+    };
 
-    if (result.success) {
-        res.status(200).json(result);
-    } else {
-        res.status(500).json(result);
-    }
-});
+    // Durchschnittsberechnung (nur erfolgreiche Werte)
+    const validPrices = [
+        data.homeday.price,
+        data.check24.price,
+        data.immoscout.totalValue
+    ].filter(p => p > 0);
 
-// Check24 Endpunkt
-app.post('/api/v1/estimations/check24', authenticate, async (req, res) => {
-    // Da Check24 mehr Daten braucht, ziehen wir uns ein paar mehr Felder aus dem JSON
-    const { street, houseNumber, zip, livingSpace, yearOfConstruction, rooms } = req.body;
+    const avgPrice = validPrices.length > 0 
+        ? Math.round(validPrices.reduce((a, b) => a + b, 0) / validPrices.length) 
+        : 0;
 
-    if (!street || !houseNumber || !zip || !livingSpace) {
-        return res.status(400).json({
-            success: false,
-            message: "Bitte 'street', 'houseNumber', 'zip' und 'livingSpace' mitsenden."
-        });
-    }
-
-    const result = await scrapeCheck24({
-        street, houseNumber, zip, livingSpace, yearOfConstruction, rooms
+    res.json({
+        metadata: input,
+        averagePrice: avgPrice,
+        details: data,
+        timestamp: new Date().toISOString()
     });
-
-    if (result.success) {
-        res.status(200).json(result);
-    } else {
-        res.status(500).json(result);
-    }
 });
 
-app.listen(PORT, () => {
-    console.log(`🚀 Server läuft auf Port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 API läuft auf Port ${PORT}`));
