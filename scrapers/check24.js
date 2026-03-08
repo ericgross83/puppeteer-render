@@ -13,17 +13,32 @@ const scrapeCheck24 = async (data) => {
     try {
         browser = await puppeteer.launch({
             headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--single-process']
+            args: [
+                '--no-sandbox', 
+                '--disable-setuid-sandbox', 
+                '--single-process',
+                '--no-zygote'
+            ]
         });
 
         const page = await browser.newPage();
 
-        // 1. Session auf der korrekten Subdomain initialisieren (Same-Origin-Fix)
-        console.log(`[Check24] Initialisiere Session auf Subdomain...`);
-        await page.goto('https://baufinanzierung.check24.de/baufinanzierung/immobilienbewertung/', { waitUntil: 'domcontentloaded' });
+        // 1. Menschliches Verhalten simulieren: Aktueller User-Agent & Viewport
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+        await page.setViewport({ width: 1280, height: 800 });
 
-        // 2. API-Call direkt abfeuern
+        console.log(`[Check24] Initialisiere Session auf Subdomain...`);
+        await page.goto('https://baufinanzierung.check24.de/baufinanzierung/immobilienbewertung/', { 
+            waitUntil: 'networkidle2', 
+            timeout: 30000 
+        });
+
+        // 2. Kleiner "Human-Delay": Nicht sofort feuern
+        await new Promise(r => setTimeout(r, 2000));
+
         console.log(`[Check24] Sende Direkt-Anfrage für ${street}...`);
+        
+        // 3. API-Call mit verbesserter Fehlerprüfung
         const response = await page.evaluate(async (payload) => {
             const r = await fetch('https://baufinanzierung.check24.de/baufinanzierung/immobilienbewertung/session', {
                 method: 'POST',
@@ -33,6 +48,15 @@ const scrapeCheck24 = async (data) => {
                 },
                 body: JSON.stringify(payload)
             });
+
+            // Prüfen, ob wirklich JSON zurückkommt
+            const contentType = r.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+                const text = await r.text();
+                // Wenn HTML kommt (<!DOCTYPE), werfen wir einen lesbaren Fehler
+                throw new Error(`BOT_BLOCK: Check24 hat die Anfrage abgelehnt (HTML erhalten).`);
+            }
+
             return await r.json();
         }, {
             propertyType: 1,
@@ -51,15 +75,15 @@ const scrapeCheck24 = async (data) => {
         });
 
         const iframeUrl = response.priceHubbleIframeUrl;
-        if (!iframeUrl) throw new Error("Keine Dossier-URL in der API-Antwort.");
+        if (!iframeUrl) throw new Error("Keine Dossier-URL in der Antwort.");
 
-        // 3. Zum Dossier springen und extrahieren
-        console.log(`[Check24] Springe direkt zum Dossier...`);
+        // 4. Zum Dossier springen
+        console.log(`[Check24] Springe zum Dossier...`);
         await page.goto(iframeUrl, { waitUntil: 'networkidle2' });
         await page.waitForSelector('.valuation__section__value', { timeout: 15000 });
         
         // Kurzer Moment für die Animation der Zahlen
-        await new Promise(r => setTimeout(r, 1500));
+        await new Promise(r => setTimeout(r, 1000));
 
         const extracted = await page.evaluate(() => {
             const clean = (s) => {
@@ -84,8 +108,6 @@ const scrapeCheck24 = async (data) => {
             };
         });
 
-        console.log(`[Check24] Done: ${extracted.priceTotal} €`);
-
         return { 
             success: true, 
             platform: "check24", 
@@ -95,8 +117,12 @@ const scrapeCheck24 = async (data) => {
         };
 
     } catch (error) {
-        console.error(`[Check24] Error: ${error.message}`);
-        return { success: false, platform: "check24", error: error.message };
+        console.error(`[Check24] Fehler: ${error.message}`);
+        return { 
+            success: false, 
+            platform: "check24", 
+            error: error.message 
+        };
     } finally {
         if (browser) await browser.close();
     }
