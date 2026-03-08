@@ -11,7 +11,7 @@ app.use(express.json());
 
 app.get('/valuation', async (req, res) => {
     // API-Key Check
-    if (req.headers['x-api-key'] !== process.env.API_KEY) {
+    if (req.headers['x-api-key'] !== process.env.MY_API_KEY) {
         return res.status(401).json({ error: 'Nicht autorisiert' });
     }
 
