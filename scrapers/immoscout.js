@@ -1,29 +1,22 @@
 const path = require('path');
 const fs = require('fs');
 
-// In der Funktion:
+// Wir definieren den Pfad, aber wir PRÜFEN ihn erst in der Funktion!
 const cookiePath = path.resolve(__dirname, '../is24_cookies.json');
-if (!fs.existsSync(cookiePath)) {
-    throw new Error(`Cookies nicht gefunden unter: ${cookiePath}`);
-}
 
-
-/**
- * ImmoScout24 API-Scraper (Direct Fetch Modus)
- * Nutzt gespeicherte Session-Cookies für maximale Stabilität.
- */
 const scrapeImmoScout = async (input) => {
     try {
         // 1. Cookies und Sicherheits-Token laden
         if (!fs.existsSync(cookiePath)) {
-            throw new Error("is24_cookies.json fehlt! Bitte einmalig manuell erstellen.");
+            // Wir werfen hier den Fehler, damit nur dieser Scraper abbricht, nicht der Server!
+            return { success: false, platform: 'ImmoScout24', error: "is24_cookies.json fehlt auf dem Server." };
         }
 
         const rawCookies = JSON.parse(fs.readFileSync(cookiePath, 'utf8'));
         const cookieHeader = rawCookies.map(c => `${c.name}=${c.value}`).join('; ');
         const xsrfToken = rawCookies.find(c => c.name === 'XSRF-TOKEN')?.value;
 
-        // 2. Direktanfrage an den ImmoScout Property-Hub
+        // ... Rest des Codes bleibt gleich, nutze fetch wie gewohnt ...
         const response = await fetch('https://my-property.immobilienscout24.de/property-hub/valuation/sell?startDate=2024-01-01&endDate=2027-03-01', {
             method: 'POST',
             headers: {
@@ -36,46 +29,26 @@ const scrapeImmoScout = async (input) => {
             },
             body: JSON.stringify({
                 type: "APARTMENT",
-                address: {
-                    zipcode: input.zip,
-                    city: input.city,
-                    houseNumber: input.houseNumber,
-                    street: input.street
-                },
+                address: { zipcode: input.zip, city: input.city, houseNumber: input.houseNumber, street: input.street },
                 numberOfRooms: parseInt(input.rooms),
                 livingArea: parseInt(input.livingSpace)
             })
         });
 
-        // 3. Fehlerbehandlung (z.B. Cookies abgelaufen)
-        if (!response.ok) {
-            return {
-                success: false,
-                platform: 'ImmoScout24',
-                status: response.status,
-                error: response.status === 401 ? "Cookies abgelaufen" : "API Fehler"
-            };
-        }
+        if (!response.ok) return { success: false, platform: 'ImmoScout24', status: response.status };
 
         const data = await response.json();
-
-        // 4. Daten aufbereiten und qm-Preis berechnen
-        const pricePerSqm = Math.round(data.value / input.livingSpace);
-
         return {
             success: true,
             platform: 'ImmoScout24',
             totalValue: data.value,
-            pricePerSqm: pricePerSqm,
-            range: `${data.valueMin.toLocaleString('de-DE')}€ - ${data.valueMax.toLocaleString('de-DE')}€`,
-            confidence: data.valueScore
+            pricePerSqm: Math.round(data.value / input.livingSpace),
+            range: `${data.valueMin.toLocaleString('de-DE')}€ - ${data.valueMax.toLocaleString('de-DE')}€`
         };
 
     } catch (err) {
-        console.error('❌ ImmoScout-Fehler:', err.message);
         return { success: false, platform: 'ImmoScout24', error: err.message };
     }
 };
 
-// Export für die Verwendung in index.js
 module.exports = { scrapeImmoScout };
