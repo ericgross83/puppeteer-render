@@ -38,12 +38,18 @@ const scrapeImmoScout = async (input) => {
         if (!response.ok) return { success: false, platform: 'ImmoScout24', status: response.status };
 
         const data = await response.json();
+        
         return {
             success: true,
             platform: 'ImmoScout24',
             totalValue: data.value,
             pricePerSqm: Math.round(data.value / input.livingSpace),
-            range: `${data.valueMin.toLocaleString('de-DE')}€ - ${data.valueMax.toLocaleString('de-DE')}€`
+            // Wir vereinheitlichen das Format hier:
+            priceRange: {
+                min: data.valueMin,
+                max: data.valueMax
+            },
+            confidence: data.valueScore
         };
 
     } catch (err) {
