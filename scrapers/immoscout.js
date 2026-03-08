@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Wir definieren den Pfad, aber wir PRÜFEN ihn erst in der Funktion!
-const cookiePath = path.resolve(__dirname, '../is24_cookies.json');
+const cookiePath = path.resolve(__dirname, './is24_cookies.json');
 
 const scrapeImmoScout = async (input) => {
     try {
