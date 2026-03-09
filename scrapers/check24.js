@@ -6,11 +6,11 @@ puppeteer.use(StealthPlugin());
 const scrapeCheck24 = async (data) => {
 
     console.log({ ...data, message: "[Check24] Initialisiere Scraper..." });
-    
+
     const {
-        street, 
-        houseNumber, 
-        zip, 
+        street,
+        houseNumber,
+        zip,
         city,
         livingSpace,
         yearOfConstruction,
@@ -23,8 +23,8 @@ const scrapeCheck24 = async (data) => {
         browser = await puppeteer.launch({
             headless: true,
             args: [
-                '--no-sandbox', 
-                '--disable-setuid-sandbox', 
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
                 '--single-process',
                 '--no-zygote'
             ]
@@ -37,16 +37,35 @@ const scrapeCheck24 = async (data) => {
         await page.setViewport({ width: 1280, height: 800 });
 
         console.log(`[Check24] Initialisiere Session auf Subdomain...`);
-        await page.goto('https://baufinanzierung.check24.de/baufinanzierung/immobilienbewertung/', { 
-            waitUntil: 'networkidle2', 
-            timeout: 30000 
+        await page.goto('https://baufinanzierung.check24.de/baufinanzierung/immobilienbewertung/', {
+            waitUntil: 'networkidle2',
+            timeout: 30000
         });
 
-        // 2. Kleiner "Human-Delay": Nicht sofort feuern
-        await new Promise(r => setTimeout(r, 2000));
+        // --- DER STEALTH-TANZ STARTET HIER ---
+        console.log(`[Check24] Führe Maus- und Scrollbewegungen aus (Bot-Tarnung)...`);
 
-        console.log(`[Check24] Sende Direkt-Anfrage für ${street}...`);
-        
+        // 1. Zufällige Mausbewegungen (Zahlen = X und Y Koordinaten)
+        await page.mouse.move(150 + Math.random() * 100, 200 + Math.random() * 100);
+        await new Promise(r => setTimeout(r, 400 + Math.random() * 300));
+        await page.mouse.move(450 + Math.random() * 200, 400 + Math.random() * 200);
+        await new Promise(r => setTimeout(r, 600 + Math.random() * 400));
+
+        // 2. Ein bisschen nach unten scrollen
+        await page.evaluate(() => window.scrollBy({ top: 300, behavior: 'smooth' }));
+        await new Promise(r => setTimeout(r, 800 + Math.random() * 500));
+
+        // 3. Einen Klick ins Leere machen (aktiviert oft bestimmte Event-Listener der WAF)
+        await page.mouse.click(10, 10);
+        await new Promise(r => setTimeout(r, 500 + Math.random() * 500));
+
+        // 4. Ein Stückchen wieder hoch scrollen
+        await page.evaluate(() => window.scrollBy({ top: -100, behavior: 'smooth' }));
+        await new Promise(r => setTimeout(r, 1000));
+        // --- DER STEALTH-TANZ ENDET HIER ---
+
+        console.log(`[Check24] Sende getarnte Direkt-Anfrage für ${street}...`);
+
         // 3. API-Call mit verbesserter Fehlerprüfung
         const response = await page.evaluate(async (payload) => {
             const r = await fetch('https://baufinanzierung.check24.de/baufinanzierung/immobilienbewertung/session', {
@@ -90,7 +109,7 @@ const scrapeCheck24 = async (data) => {
         console.log(`[Check24] Springe zum Dossier...`);
         await page.goto(iframeUrl, { waitUntil: 'networkidle2' });
         await page.waitForSelector('.valuation__section__value', { timeout: 15000 });
-        
+
         // Kurzer Moment für die Animation der Zahlen
         await new Promise(r => setTimeout(r, 1000));
 
@@ -117,9 +136,9 @@ const scrapeCheck24 = async (data) => {
             };
         });
 
-        return { 
-            success: true, 
-            platform: "check24", 
+        return {
+            success: true,
+            platform: "check24",
             pricePerSqm: extracted.pricePerSqm,
             priceTotal: extracted.priceTotal,
             priceRange: { min: extracted.min, max: extracted.max }
@@ -127,10 +146,10 @@ const scrapeCheck24 = async (data) => {
 
     } catch (error) {
         console.error(`[Check24] Fehler: ${error.message}`);
-        return { 
-            success: false, 
-            platform: "check24", 
-            error: error.message 
+        return {
+            success: false,
+            platform: "check24",
+            error: error.message
         };
     } finally {
         if (browser) await browser.close();
