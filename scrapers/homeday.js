@@ -5,7 +5,7 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 puppeteer.use(StealthPlugin());
 
 const scrapeHomeday = async (data) => {
-    const { street, zip, city, livingSpace } = data;
+    const { street, houseNumber, zip, city, livingSpace } = data;
     let browser;
     try {
         browser = await puppeteer.launch({
