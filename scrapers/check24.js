@@ -7,7 +7,6 @@ const scrapeCheck24 = async (data) => {
 
     console.log({ ...data, message: "[Check24] Initialisiere Scraper..." });
     
-
     const {
         street, 
         houseNumber, 

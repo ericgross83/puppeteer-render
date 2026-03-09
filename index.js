@@ -3,6 +3,7 @@ const express = require('express');
 const { scrapeHomeday } = require('./scrapers/homeday');
 const { scrapeCheck24 } = require('./scrapers/check24');
 const { scrapeImmoScout } = require('./scrapers/immoscout');
+const { debugLog } = require('./logger');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,6 +15,8 @@ app.get('/valuation', async (req, res) => {
         return res.status(401).json({ error: 'Nicht autorisiert' });
     }
 
+    debugLog('API', 'Neue Anfrage erhalten', { query: req.query });
+
     // 1. Parameter auslesen (ohne Fallbacks!)
     const street = req.query.street;
     const houseNumber = req.query.houseNumber;
@@ -23,6 +26,8 @@ app.get('/valuation', async (req, res) => {
     const rooms = parseInt(req.query.rooms);
     const yearOfConstruction = parseInt(req.query.yearOfConstruction);
     const bathrooms = parseInt(req.query.bathrooms);
+
+    debugLog('API', 'Roh-Parameter extrahiert', { street, houseNumber, zip, city, livingSpace, rooms, yearOfConstruction, bathrooms });
 
     // 2. Strikte Validierung (Fail-Fast)
     const missingOrInvalid = [];
@@ -51,10 +56,12 @@ app.get('/valuation', async (req, res) => {
         zip,
         city,
         livingSpace,
-        rooms
+        rooms,
+        yearOfConstruction,
+        bathrooms
     };
 
-    console.log(`🔎 Vollständige Marktanalyse für: ${input.street} ${input.houseNumber}, ${input.zip} ${input.city} (${input.livingSpace}qm, ${input.rooms} Zimmer)`);
+    debugLog('API', 'Vollständige Marktanalyse für:', input);
 
     const results = await Promise.allSettled([
         scrapeHomeday(input),
