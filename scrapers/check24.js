@@ -130,7 +130,7 @@ const scrapeCheck24 = async (data) => {
             error: error.message 
         };
     } finally {
-        // if (browser) await browser.close();
+        if (browser) await browser.close();
     }
 };
 
