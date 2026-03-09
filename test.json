@@ -7,29 +7,44 @@
         "livingSpace": 60,
         "rooms": 2
     },
-    "averagePrice": 0,
-    "details": {
+    "summary": {
+        "averagePricePerSqm": 5718,
+        "averageTotalValue": 343067,
+        "averageMarketRange": {
+            "min": 295650,
+            "max": 407950
+        },
+        "activeSources": 3
+    },
+    "sourceDetails": {
         "homeday": {
-            "success": false,
-            "platform": "homeday",
-            "errorType": "SCRAPE_FAILED",
-            "message": "Cannot read properties of undefined (reading 'toLowerCase')"
+            "status": "SUCCESS",
+            "sqmPrice": 5550,
+            "totalValue": 333000,
+            "addressFound": "Petersburger Straße 10249 Friedrichshain-Kreuzberg, Berlin",
+            "error": null
         },
         "check24": {
-            "success": true,
-            "platform": "check24",
-            "pricePerSqm": 5937,
-            "priceTotal": 356200,
-            "priceRange": {
+            "status": "SUCCESS",
+            "sqmPrice": 5937,
+            "totalValue": 356200,
+            "range": {
                 "min": 311300,
                 "max": 381900
-            }
+            },
+            "error": null
         },
         "immoscout": {
-            "success": false,
-            "platform": "ImmoScout24",
-            "error": "is24_cookies.json fehlt! Bitte einmalig manuell erstellen."
+            "status": "SUCCESS",
+            "sqmPrice": 5667,
+            "totalValue": 340000,
+            "range": {
+                "min": 280000,
+                "max": 434000
+            },
+            "confidenceScore": 2.48,
+            "error": null
         }
     },
-    "timestamp": "2026-03-08T02:07:39.753Z"
+    "timestamp": "2026-03-08T03:05:34.271Z"
 }

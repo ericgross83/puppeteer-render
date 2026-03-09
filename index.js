@@ -14,16 +14,44 @@ app.get('/valuation', async (req, res) => {
         return res.status(401).json({ error: 'Nicht autorisiert' });
     }
 
+    // 1. Parameter auslesen (ohne Fallbacks!)
+    const street = req.query.street;
+    const houseNumber = req.query.houseNumber;
+    const zip = req.query.zip;
+    const city = req.query.city;
+    // Berücksichtigt 'livingArea' (Lovable) oder 'livingSpace' als Zahl
+    const livingSpace = parseInt(req.query.livingSpace);
+    const rooms = parseInt(req.query.rooms);
+
+    // 2. Strikte Validierung (Fail-Fast)
+    const missingOrInvalid = [];
+    if (!street) missingOrInvalid.push('street');
+    if (!houseNumber) missingOrInvalid.push('houseNumber');
+    if (!zip) missingOrInvalid.push('zip');
+    if (!city) missingOrInvalid.push('city');
+    if (!livingSpace || isNaN(livingSpace)) missingOrInvalid.push('livingArea (muss eine Zahl sein)');
+    if (!rooms || isNaN(rooms)) missingOrInvalid.push('rooms (muss eine Zahl sein)');
+
+    // Wenn etwas fehlt, sofort abbrechen und 400 Fehler zurückgeben
+    if (missingOrInvalid.length > 0) {
+        console.warn(`⚠️ Anfrage abgebrochen. Fehlerhafte Parameter: ${missingOrInvalid.join(', ')}`);
+        return res.status(400).json({
+            error: 'Fehlende oder ungültige Parameter',
+            details: `Für eine präzise Bewertung müssen folgende Parameter zwingend übergeben werden: ${missingOrInvalid.join(', ')}`
+        });
+    }
+
+    // 3. Wenn alles passt, das Input-Objekt für die Scraper bauen
     const input = {
-        street: req.query.street || "Petersburger Straße",
-        houseNumber: req.query.houseNumber || "39",
-        zip: req.query.zip || "10249",
-        city: req.query.city || "Berlin",
-        livingSpace: parseInt(req.query.livingSpace) || 60,
-        rooms: parseInt(req.query.rooms) || 2
+        street,
+        houseNumber,
+        zip,
+        city,
+        livingSpace,
+        rooms
     };
 
-    console.log(`🔎 Vollständige Marktanalyse für: ${input.street} ${input.houseNumber}`);
+    console.log(`🔎 Vollständige Marktanalyse für: ${input.street} ${input.houseNumber}, ${input.zip} ${input.city} (${input.livingSpace}qm, ${input.rooms} Zimmer)`);
 
     const results = await Promise.allSettled([
         scrapeHomeday(input),
@@ -39,7 +67,7 @@ app.get('/valuation', async (req, res) => {
     };
 
     // --- BERECHNUNG DER DURCHSCHNITTE ---
-    
+
     // Quadratmeterpreise
     const sqmPrices = [
         platformData.homeday.pricePerSqm,
@@ -58,12 +86,12 @@ app.get('/valuation', async (req, res) => {
     const minPrices = [platformData.check24.priceRange?.min, platformData.immoscout.priceRange?.min].filter(p => p > 0);
     const maxPrices = [platformData.check24.priceRange?.max, platformData.immoscout.priceRange?.max].filter(p => p > 0);
 
-    const avgSqmPrice = sqmPrices.length > 0 
-        ? Math.round(sqmPrices.reduce((a, b) => a + b, 0) / sqmPrices.length) 
+    const avgSqmPrice = sqmPrices.length > 0
+        ? Math.round(sqmPrices.reduce((a, b) => a + b, 0) / sqmPrices.length)
         : 0;
 
-    const avgTotalValue = totalValues.length > 0 
-        ? Math.round(totalValues.reduce((a, b) => a + b, 0) / totalValues.length) 
+    const avgTotalValue = totalValues.length > 0
+        ? Math.round(totalValues.reduce((a, b) => a + b, 0) / totalValues.length)
         : 0;
 
     const avgRange = {
@@ -74,7 +102,7 @@ app.get('/valuation', async (req, res) => {
     // --- DIE ANTWORT-STRUKTUR ---
     res.json({
         metadata: input,
-        
+
         // TEIL 1: Die berechnete Zusammenfassung (Der "Cool"-Faktor)
         summary: {
             averagePricePerSqm: avgSqmPrice,
@@ -108,7 +136,7 @@ app.get('/valuation', async (req, res) => {
                 error: platformData.immoscout.error || null
             }
         },
-        
+
         timestamp: new Date().toISOString()
     });
 });

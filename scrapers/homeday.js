@@ -26,6 +26,9 @@ const scrapeHomeday = async (data) => {
         const addressQuery = `${street}, ${zip}`.replace(/ /g, '+');
         const homedayUrl = `https://www.homeday.de/de/preisatlas/${city.toLowerCase()}/${addressQuery}?map_layer=standard&marketing_type=sell&property_type=apartment`;
 
+        console.log(homedayUrl);
+        
+
         console.log(`[Homeday] Navigiere zu: ${homedayUrl}`);
         await page.goto(homedayUrl, { waitUntil: 'networkidle2' });
 

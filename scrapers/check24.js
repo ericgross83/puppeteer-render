@@ -5,14 +5,20 @@ puppeteer.use(StealthPlugin());
 
 const scrapeCheck24 = async (data) => {
     const {
-        street, houseNumber, zip, city = "Berlin",
-        livingSpace = '60', yearOfConstruction = 1990, rooms = '2'
+        street, 
+        houseNumber, 
+        zip, 
+        city,
+        livingSpace,
+        yearOfConstruction,
+        rooms,
+        bathrooms,
     } = data;
 
     let browser;
     try {
         browser = await puppeteer.launch({
-            headless: true,
+            headless: false,
             args: [
                 '--no-sandbox', 
                 '--disable-setuid-sandbox', 
@@ -61,12 +67,12 @@ const scrapeCheck24 = async (data) => {
         }, {
             propertyType: 1,
             address: { street, houseNumber, postalCode: zip, location: city },
-            yearOfConstruction: parseInt(yearOfConstruction),
-            totalLivingSpace: livingSpace.toString(),
+            yearOfConstruction: yearOfConstruction,
+            totalLivingSpace: livingSpace,
             condition: 2,
             furnishing: 2,
-            roomsCount: rooms.toString(),
-            bathroomsCount: 1,
+            roomsCount: rooms,
+            bathroomsCount: bathrooms,
             garagesCount: 0,
             parkingSpacesCount: 0,
             purpose: 1,
@@ -124,7 +130,7 @@ const scrapeCheck24 = async (data) => {
             error: error.message 
         };
     } finally {
-        if (browser) await browser.close();
+        // if (browser) await browser.close();
     }
 };
 
