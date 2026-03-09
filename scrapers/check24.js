@@ -55,8 +55,14 @@ const scrapeCheck24 = async (data) => {
         await page.evaluate(() => window.scrollBy({ top: 300, behavior: 'smooth' }));
         await new Promise(r => setTimeout(r, 800 + Math.random() * 500));
 
-        // 3. Einen Klick ins Leere machen (aktiviert oft bestimmte Event-Listener der WAF)
-        await page.mouse.click(10, 10);
+        // 3. Einen sicheren, "blinden" Klick machen (löst Event-Listener aus, ohne Links zu treffen)
+        try {
+            // Wir klicken auf eine normale Überschrift oder Text. Das ist zu 100% sicher.
+            await page.click('h1');
+        } catch (e) {
+            // Fallback, falls gerade keine h1 da ist: Wir klicken in den leeren Seitenhintergrund
+            await page.click('body');
+        }
         await new Promise(r => setTimeout(r, 500 + Math.random() * 500));
 
         // 4. Ein Stückchen wieder hoch scrollen
