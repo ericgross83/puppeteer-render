@@ -19,9 +19,10 @@ app.get('/valuation', async (req, res) => {
     const houseNumber = req.query.houseNumber;
     const zip = req.query.zip;
     const city = req.query.city;
-    // Berücksichtigt 'livingArea' (Lovable) oder 'livingSpace' als Zahl
     const livingSpace = parseInt(req.query.livingSpace);
     const rooms = parseInt(req.query.rooms);
+    const yearOfConstruction = parseInt(req.query.yearOfConstruction);
+    const bathrooms = parseInt(req.query.bathrooms);
 
     // 2. Strikte Validierung (Fail-Fast)
     const missingOrInvalid = [];
@@ -29,8 +30,10 @@ app.get('/valuation', async (req, res) => {
     if (!houseNumber) missingOrInvalid.push('houseNumber');
     if (!zip) missingOrInvalid.push('zip');
     if (!city) missingOrInvalid.push('city');
-    if (!livingSpace || isNaN(livingSpace)) missingOrInvalid.push('livingArea (muss eine Zahl sein)');
-    if (!rooms || isNaN(rooms)) missingOrInvalid.push('rooms (muss eine Zahl sein)');
+    if (!livingSpace || isNaN(livingSpace)) missingOrInvalid.push('livingSpace (Zahl erwartet)');
+    if (!rooms || isNaN(rooms)) missingOrInvalid.push('rooms (Zahl erwartet)');
+    if (!yearOfConstruction || isNaN(yearOfConstruction)) missingOrInvalid.push('yearOfConstruction (Zahl erwartet)');
+    if (!bathrooms || isNaN(bathrooms)) missingOrInvalid.push('bathrooms (Zahl erwartet)');
 
     // Wenn etwas fehlt, sofort abbrechen und 400 Fehler zurückgeben
     if (missingOrInvalid.length > 0) {
