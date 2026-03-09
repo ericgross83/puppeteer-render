@@ -23,7 +23,8 @@ const scrapeHomeday = async (data) => {
         await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36');
         await page.setViewport({ width: 1440, height: 900 });
 
-        const addressQuery = `${street}, ${zip}`.replace(/ /g, '+');
+        const rawAddress = `${street} ${houseNumber}, ${zip}`;
+        const addressQuery = rawAddress.toLowerCase().replace(/ /g, '+');
         const homedayUrl = `https://www.homeday.de/de/preisatlas/${city.toLowerCase()}/${addressQuery}?map_layer=standard&marketing_type=sell&property_type=apartment`;
 
         console.log(homedayUrl);
