@@ -4,6 +4,10 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 puppeteer.use(StealthPlugin());
 
 const scrapeCheck24 = async (data) => {
+
+    console.log({ ...data, message: "[Check24] Initialisiere Scraper..." });
+    
+
     const {
         street, 
         houseNumber, 
