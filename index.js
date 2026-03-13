@@ -183,8 +183,18 @@ app.get('/duolingo', async (req, res) => {
     }
 });
 
+app.get('/debug-screenshot', (req, res) => {
+    const screenshotPath = path.resolve(__dirname, 'duolingo_error.png');
+    
+    if (fs.existsSync(screenshotPath)) {
+        res.sendFile(screenshotPath);
+    } else {
+        res.status(404).send('Kein Screenshot gefunden. Entweder lief alles glatt oder der Server wurde neu gestartet.');
+    }
+});
+
 // Server starten
 app.listen(PORT, () => {
     console.log(`🚀 Railway Server aktiv auf Port ${PORT}`);
-    console.log(`📡 Endpoints: /valuation, /duolingo`);
+    console.log(`📡 Endpoints: /valuation, /duolingo, /debug-screenshot`);
 });
