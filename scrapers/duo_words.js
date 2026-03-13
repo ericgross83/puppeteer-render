@@ -22,7 +22,7 @@ async function scrapeDuolingoWords(headless = true) {
 
     try {
         // --- LOGIN PROZESS ---
-        await page.goto('https://www.duolingo.com/', { waitUntil: 'networkidle2' });
+        await page.goto('https://www.duolingo.com/', { waitUntil: 'networkidle2', timeout: 90000 });
 
         // Cookie Banner
         try {
@@ -39,7 +39,7 @@ async function scrapeDuolingoWords(headless = true) {
         await page.type('input[data-test="password-input"]', password, { delay: 50 });
 
         await Promise.all([
-            page.waitForNavigation({ waitUntil: 'networkidle2' }),
+            page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 90000 }),
             page.click('button[data-test="register-button"]')
         ]);
 
