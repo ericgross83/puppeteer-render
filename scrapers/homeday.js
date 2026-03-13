@@ -4,12 +4,12 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 
 puppeteer.use(StealthPlugin());
 
-const scrapeHomeday = async (data) => {
+const scrapeHomeday = async (data, headless = true) => {
     const { street, houseNumber, zip, city, livingSpace } = data;
     let browser;
     try {
         browser = await puppeteer.launch({
-            headless: true,
+            headless: headless, // In Tests auf false setzen, damit man die Aktionen sehen kann.
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',

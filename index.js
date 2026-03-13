@@ -1,8 +1,11 @@
 require('dotenv').config();
 const express = require('express');
+
+// Scraper-Funktionen importieren
 const { scrapeHomeday } = require('./scrapers/homeday');
 const { scrapeCheck24 } = require('./scrapers/check24');
 const { scrapeImmoScout } = require('./scrapers/immoscout');
+const { scrapeDuolingoWords } = require('./scrapers/duo_words');
 const { debugLog } = require('./logger');
 
 const app = express();
@@ -151,4 +154,37 @@ app.get('/valuation', async (req, res) => {
     });
 });
 
-app.listen(PORT, () => console.log(`🚀 API aktiv auf Port ${PORT}`));
+// --- ENDPOINT: DUOLINGO VOKABELN ---
+app.get('/duolingo', async (req, res) => {
+    // Sicherheitscheck
+    if (req.headers['x-api-key'] !== process.env.MY_API_KEY) {
+        return res.status(401).json({ error: 'Nicht autorisiert' });
+    }
+
+    debugLog('API', 'Duolingo-Vokabel-Anfrage gestartet');
+
+    try {
+        // Wir übergeben 'true', damit Puppeteer auf Railway im Headless-Modus läuft
+        const words = await scrapeDuolingoWords(true);
+        
+        res.json({
+            success: true,
+            count: words.length,
+            timestamp: new Date().toISOString(),
+            data: words
+        });
+    } catch (error) {
+        console.error('Duolingo-Fehler:', error.message);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Fehler beim Abrufen der Duolingo-Wörter', 
+            details: error.message 
+        });
+    }
+});
+
+// Server starten
+app.listen(PORT, () => {
+    console.log(`🚀 Railway Server aktiv auf Port ${PORT}`);
+    console.log(`📡 Endpoints: /valuation, /duolingo`);
+});

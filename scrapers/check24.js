@@ -3,7 +3,7 @@ const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 puppeteer.use(StealthPlugin());
 
-const scrapeCheck24 = async (data) => {
+const scrapeCheck24 = async (data, headless = true) => {
 
     console.log({ ...data, message: "[Check24] Initialisiere Scraper..." });
 
@@ -21,7 +21,7 @@ const scrapeCheck24 = async (data) => {
     let browser;
     try {
         browser = await puppeteer.launch({
-            headless: true,
+            headless: headless, // In Tests auf false setzen, damit man die Aktionen sehen kann.
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
