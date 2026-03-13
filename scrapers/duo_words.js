@@ -91,6 +91,19 @@ async function scrapeDuolingoWords(headless = true) {
             lastReviewed: null
         }));
 
+    } catch (error) {
+        console.error(`❌ FEHLER: ${error.message}`);
+
+        try {
+            // Speichert ein Bild davon, was der Server gerade sieht (z.B. ein Captcha)
+            await page.screenshot({ path: 'duolingo_error.png', fullPage: true });
+            console.log('📸 Screenshot "duolingo_error.png" wurde im Root-Verzeichnis erstellt.');
+        } catch (screenshotError) {
+            console.error('Screenshot konnte nicht erstellt werden:', screenshotError.message);
+        }
+
+        // Wir werfen den Fehler weiter, damit die index.js ihn als 500er Fehler senden kann
+        throw error;
     } finally {
         await browser.close();
     }
