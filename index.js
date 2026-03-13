@@ -13,11 +13,19 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-app.get('/valuation', async (req, res) => {
-    if (req.headers['x-api-key'] !== process.env.MY_API_KEY) {
+const authenticate = (req, res, next) => {
+    const apiKey = req.headers['x-api-key'];
+    
+    if (apiKey !== process.env.MY_API_KEY) {
+        debugLog('AUTH', 'Abgewiesener Zugriff (falscher API-Key)');
         return res.status(401).json({ error: 'Nicht autorisiert' });
     }
+    
+    // Alles okay? Dann lass die Anfrage zur nächsten Funktion (next) weiterziehen
+    next();
+};
 
+app.get('/valuation', authenticate, async (req, res) => {
     debugLog('API', 'Neue Anfrage erhalten', { query: req.query });
 
     // 1. Parameter auslesen (ohne Fallbacks!)
@@ -155,12 +163,7 @@ app.get('/valuation', async (req, res) => {
 });
 
 // --- ENDPOINT: DUOLINGO VOKABELN ---
-app.get('/duolingo', async (req, res) => {
-    // Sicherheitscheck
-    if (req.headers['x-api-key'] !== process.env.MY_API_KEY) {
-        return res.status(401).json({ error: 'Nicht autorisiert' });
-    }
-
+app.get('/duolingo', authenticate, async (req, res) => {
     debugLog('API', 'Duolingo-Vokabel-Anfrage gestartet');
 
     try {
@@ -183,7 +186,7 @@ app.get('/duolingo', async (req, res) => {
     }
 });
 
-app.get('/debug-screenshot', (req, res) => {
+app.get('/debug-screenshot',authenticate, (req, res) => {
     const screenshotPath = path.resolve(__dirname, 'duolingo_error.png');
     
     if (fs.existsSync(screenshotPath)) {
