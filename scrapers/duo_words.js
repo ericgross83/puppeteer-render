@@ -15,7 +15,7 @@ async function scrapeDuolingoWords(headless = true) {
         args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
 
-    const timeout = 90000; // 90 Sekunden Timeout für alle Aktionen 
+    const timeout = 30000; // 90 Sekunden Timeout für alle Aktionen 
 
     const page = await browser.newPage();
     page.setDefaultNavigationTimeout(timeout);
