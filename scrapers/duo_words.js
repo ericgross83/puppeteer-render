@@ -15,14 +15,16 @@ async function scrapeDuolingoWords(headless = true) {
         args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
 
+    const timeout = 90000; // 90 Sekunden Timeout für alle Aktionen 
+
     const page = await browser.newPage();
-    page.setDefaultNavigationTimeout(90000);
-    page.setDefaultTimeout(90000);
+    page.setDefaultNavigationTimeout(timeout);
+    page.setDefaultTimeout(timeout);
     let allWords = [];
 
     try {
         // --- LOGIN PROZESS ---
-        await page.goto('https://www.duolingo.com/', { waitUntil: 'networkidle2', timeout: 90000 });
+        await page.goto('https://www.duolingo.com/', { waitUntil: 'networkidle2', timeout: timeout });
 
         // Cookie Banner
         try {
@@ -39,7 +41,7 @@ async function scrapeDuolingoWords(headless = true) {
         await page.type('input[data-test="password-input"]', password, { delay: 50 });
 
         await Promise.all([
-            page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 90000 }),
+            page.waitForNavigation({ waitUntil: 'networkidle2', timeout: timeout }),
             page.click('button[data-test="register-button"]')
         ]);
 
