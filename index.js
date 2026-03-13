@@ -179,13 +179,37 @@ app.get('/duolingo', authenticate, async (req, res) => {
             data: words
         });
     } catch (error) {
-        console.error('Duolingo-Fehler:', error.message);
-        res.status(500).json({ 
-            success: false, 
-            error: 'Fehler beim Abrufen der Duolingo-Wörter', 
-            details: error.message 
-        });
+        debugLog('ERROR', `Scraping fehlgeschlagen: ${error.message}`);
+
+        // Pfad zum Screenshot (muss mit dem Pfad in duo_words.js übereinstimmen)
+        const screenshotPath = path.resolve(__dirname, 'duolingo_error.png');
+
+        // Warten wir ganz kurz, um sicherzugehen, dass das Bild fertig geschrieben wurde
+        setTimeout(() => {
+            if (fs.existsSync(screenshotPath)) {
+                // Wir schicken das Bild direkt als Antwort
+                // Wir setzen einen speziellen Header, damit du in Postman weißt, dass es ein Fehlerbild ist
+                res.setHeader('X-Scraper-Error', error.message);
+                res.status(500).sendFile(screenshotPath);
+            } else {
+                // Falls gar kein Bild da ist, schicken wir den normalen JSON-Fehler
+                res.status(500).json({ 
+                    success: false, 
+                    error: 'Scraping fehlgeschlagen und kein Screenshot verfügbar', 
+                    details: error.message 
+                });
+            }
+        }, 1000); // 1 Sekunde Puffer für das Dateisystem
     }
+
+    // catch (error) {
+    //     console.error('Duolingo-Fehler:', error.message);
+    //     res.status(500).json({ 
+    //         success: false, 
+    //         error: 'Fehler beim Abrufen der Duolingo-Wörter', 
+    //         details: error.message 
+    //     });
+    // }
 });
 
 app.get('/debug-screenshot',authenticate, (req, res) => {
