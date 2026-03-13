@@ -17,12 +17,12 @@ app.use(express.json());
 
 const authenticate = (req, res, next) => {
     const apiKey = req.headers['x-api-key'];
-    
+
     if (apiKey !== process.env.MY_API_KEY) {
         debugLog('AUTH', 'Abgewiesener Zugriff (falscher API-Key)');
         return res.status(401).json({ error: 'Nicht autorisiert' });
     }
-    
+
     // Alles okay? Dann lass die Anfrage zur nächsten Funktion (next) weiterziehen
     next();
 };
@@ -166,55 +166,43 @@ app.get('/valuation', authenticate, async (req, res) => {
 
 // --- ENDPOINT: DUOLINGO VOKABELN ---
 app.get('/duolingo', authenticate, async (req, res) => {
-    debugLog('API', 'Duolingo-Vokabel-Anfrage gestartet');
-
+    debugLog('API', 'Duolingo-Anfrage gestartet');
+    
     try {
-        // Wir übergeben 'true', damit Puppeteer auf Railway im Headless-Modus läuft
         const words = await scrapeDuolingoWords(true);
-        
         res.json({
             success: true,
             count: words.length,
-            timestamp: new Date().toISOString(),
             data: words
         });
+
     } catch (error) {
         debugLog('ERROR', `Scraping fehlgeschlagen: ${error.message}`);
 
-        // Pfad zum Screenshot (muss mit dem Pfad in duo_words.js übereinstimmen)
         const screenshotPath = path.resolve(__dirname, 'duolingo_error.png');
+        const isDebug = process.env.DEBUG_MODE === 'true'; // Check die Railway-Variable
 
-        // Warten wir ganz kurz, um sicherzugehen, dass das Bild fertig geschrieben wurde
         setTimeout(() => {
-            if (fs.existsSync(screenshotPath)) {
-                // Wir schicken das Bild direkt als Antwort
-                // Wir setzen einen speziellen Header, damit du in Postman weißt, dass es ein Fehlerbild ist
-                res.setHeader('X-Scraper-Error', error.message);
-                res.status(500).sendFile(screenshotPath);
-            } else {
-                // Falls gar kein Bild da ist, schicken wir den normalen JSON-Fehler
-                res.status(500).json({ 
-                    success: false, 
-                    error: 'Scraping fehlgeschlagen und kein Screenshot verfügbar', 
-                    details: error.message 
-                });
+            // FALL 1: Wir sind im Debug-Modus -> Schicke das Bild direkt
+            if (isDebug && fs.existsSync(screenshotPath)) {
+                res.setHeader('X-Scraper-Error', encodeURIComponent(error.message));
+                return res.status(500).sendFile(screenshotPath);
             }
-        }, 1000); // 1 Sekunde Puffer für das Dateisystem
-    }
 
-    // catch (error) {
-    //     console.error('Duolingo-Fehler:', error.message);
-    //     res.status(500).json({ 
-    //         success: false, 
-    //         error: 'Fehler beim Abrufen der Duolingo-Wörter', 
-    //         details: error.message 
-    //     });
-    // }
+            // FALL 2: Produktion oder kein Bild -> Sauberes JSON
+            res.status(500).json({ 
+                success: false, 
+                error: 'Ein interner Fehler ist aufgetreten.',
+                // Details nur mitschicken, wenn Debug an ist
+                details: isDebug ? error.message : 'Kontaktieren Sie den Admin.'
+            });
+        }, 1200);
+    }
 });
 
-app.get('/debug-screenshot',authenticate, (req, res) => {
+app.get('/debug-screenshot', authenticate, (req, res) => {
     const screenshotPath = path.resolve(__dirname, 'duolingo_error.png');
-    
+
     if (fs.existsSync(screenshotPath)) {
         res.sendFile(screenshotPath);
     } else {
